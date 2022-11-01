@@ -3,3 +3,7 @@ drivers/
 data/
 
 
+3.19.0
+*.pyc
+lightning_logs/
+temp/
