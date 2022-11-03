@@ -7,3 +7,6 @@ data/
 *.pyc
 lightning_logs/
 temp/
+
+abs_cos/
+abstract_cos/
