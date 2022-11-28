@@ -43,7 +43,7 @@ The Reddit Scraping is done in two passes:
 ## 5 - Twitter Scraping
 Similarly to the Reddit Scraping, each url is also used with the Twitter API to collect additional source documents. For each url, a maximum of 10 posts are collected from Twitter, excluding retweets, replies, and tweets from verified accounts.
 Verified accounts are removed to avoid tweets that simply use the original news article's headline. The list of urls are created in `5 - Twitter Scraping.ipynb` and passed to the `scrape_twitter.sh` bash script to iterate over twitter queries.
-Scraping is performed using a Twitter Developer Academic license and the [pull_twitter repository](https://github.com/dhudsmith/pull_twitter) I created with my undergraduate research advisor.
+Scraping is performed using a Twitter Developer Academic license and the [pull_twitter repository](https://github.com/dhudsmith/pull_twitter) I created with my undergraduate research advisor. The configuration file (with bearer token omitted) is also included in the abs_config.yaml file that was passed to pull_twitter.
 
 After the scraping is completed, all retrieved tweets are collected, filtering out any tweets that simply contain a url, removing usernames, and removing repeated phrases that may indicate article titles.
 
