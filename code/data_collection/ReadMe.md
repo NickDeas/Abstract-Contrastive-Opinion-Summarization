@@ -1,3 +1,4 @@
+_Note: All code was written based on past coding experience and self-written libraries. No third-party code was copied or used as reference for the code present in this directory._
 # Data Collection
 
 Data collection was performed in  steps, each in its own jupyter notebook in the directory:
