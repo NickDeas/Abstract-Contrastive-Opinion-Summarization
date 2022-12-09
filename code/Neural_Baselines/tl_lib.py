@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import  DataLoader
+from torch.utils.data import  DataLoader, TensorDataset
 
 import pytorch_lightning as pl
 
@@ -9,6 +9,16 @@ from torchmetrics.text.bert import BERTScore
 import pandas as pd
 import numpy as np
 
+
+def shift_tokens_right(input_ids, pad_token_id):
+    """ Shift input ids one token to the right, and wrap the last non pad token (usually <eos>).
+        This is taken directly from modeling_bart.py
+    """
+    prev_output_tokens = input_ids.clone()
+    index_of_eos = (input_ids.ne(pad_token_id).sum(dim=1) - 1).unsqueeze(-1)
+    prev_output_tokens[:, 0] = input_ids.gather(1, index_of_eos).squeeze()
+    prev_output_tokens[:, 1:] = input_ids[:, :-1]
+    return prev_output_tokens
 
 def encode_sentences(tokenizer, source_sentences, target_sentences, max_length=1024, pad_to_max_length=True, return_tensors="pt"):
     ''' Function that tokenizes a sentence 
@@ -47,8 +57,8 @@ def encode_sentences(tokenizer, source_sentences, target_sentences, max_length=1
               #add_prefix_space = True
           )
         # Shift the target ids to the right
-        # shifted_target_ids = shift_tokens_right(encoded_dict['input_ids'], tokenizer.pad_token_id)
-        target_ids.append(encoded_dict['input_ids'])
+        shifted_target_ids = shift_tokens_right(encoded_dict['input_ids'], tokenizer.pad_token_id)
+        target_ids.append(shifted_target_ids)
 
     target_ids = torch.cat(target_ids, dim = 0)
 
@@ -62,6 +72,7 @@ def encode_sentences(tokenizer, source_sentences, target_sentences, max_length=1
     return batch
 
 # ----- Dataset -----
+
 class PoliSummDataset(torch.utils.data.Dataset):
     
     def __init__(self, encodings):
@@ -141,19 +152,22 @@ class PoliSummDataModule(pl.LightningDataModule):
         train_dl = DataLoader(dataset, 
                               batch_size = self.batch_size, 
                               shuffle = True,
-                              num_workers = 16)
+                              num_workers = 16,
+                              persistent_workers=True)
         return train_dl
         
     def test_dataloader(self):
         dataset = PoliSummDataset(self.test_encodings)
         test_dl = DataLoader(dataset, batch_size = self.batch_size, shuffle = False,
-                              num_workers = 16)
+                              num_workers = 16,
+                              persistent_workers=True)
         return test_dl
     
     def val_dataloader(self):
         dataset = PoliSummDataset(self.val_encodings)
         val_dl = DataLoader(dataset, batch_size = self.batch_size, shuffle = False,
-                              num_workers = 16)
+                              num_workers = 16,
+                              persistent_workers=True)
     
     def df_to_pairs(self, df):
         src_l = 'summarize left: ' + df['all_texts'].astype(str)
@@ -188,7 +202,7 @@ class PoliSummModel(pl.LightningModule):
         return self.model(input_ids, **kwargs)
     
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=3e-5)
         return optimizer
     
     def training_step(self, batch, batch_idx):
@@ -200,9 +214,11 @@ class PoliSummModel(pl.LightningModule):
         logits = output[0]
         
         ce_loss = torch.nn.CrossEntropyLoss(ignore_index = self.tokenizer.pad_token_id)
+        print(logits.shape)
+        print(targ.shape)
         train_loss = ce_loss(logits.view(-1, logits.shape[-1]), targ.view(-1))
         
-        self.log_dict({'loss': torch.tensor(train_loss)})
+        self.log_dict({'loss': train_loss.clone().detach()})
     
     def validation_step(self, batch, batch_idx):
         src, mask, targ = batch['input_ids'], batch['attention_mask'], batch['labels']
@@ -277,14 +293,11 @@ class PoliSummModel(pl.LightningModule):
             max_length = max_len,
             early_stopping = early_stopping
         )
-        
+       
         gen_summ = [self.tokenizer.decode(w, skip_special_tokens=True, clean_up_tokenization_spaces=True) for w in generated_ids]
         return gen_summ
-    
+
     def untokenize_targ(self, sample):
         sent      = sample['labels']
         targ_summ = [self.tokenizer.decode(w, skip_special_tokens=True, clean_up_tokenization_spaces=True) for w in sent]
         return targ_summ
-        
-        
-        
