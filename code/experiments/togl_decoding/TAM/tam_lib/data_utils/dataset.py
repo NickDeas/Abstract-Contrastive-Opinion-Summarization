@@ -50,9 +50,9 @@ class DocDataset(Dataset):
                 This may contain repeated documents if an author has less documents
                 than the desired number of samples per author
         """
-        bow = self.bows[ix].toarray().astype(np.float32)[0]
+        bow = self.bows[ix].toarray().astype(np.float32)
         
-        return_dict = {'bow': bow}
+        return_dict = {'bow': bow, 'title': self.data['title'].values[ix]}
         
         return return_dict
     

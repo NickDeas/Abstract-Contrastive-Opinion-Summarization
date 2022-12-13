@@ -1,10 +1,12 @@
 from transformers import BartForConditionalGeneration, BartTokenizer
-from transformers import PegasusForConditionalGeneration, PegasusTokenizer
 from transformers import LEDForConditionalGeneration, AutoTokenizer
 import pytorch_lightning as pl
 from tl_lib import *
 
-def run_few_shot(model_type, model_chkpt, data_srcs, chkpt_dir = './checkpoints', log_dir = './results', batch_size = 4):
+def run_few_shot(model_type, model_chkpt, 
+                 data_srcs, 
+                 chkpt_dir = './checkpoints', log_dir = './results', 
+                 batch_size = 4, num_devices = 2, max_epochs = 3, min_epochs = 1):
 
         print('Loading Model')
         # Load Model and Tokenizer
@@ -31,9 +33,9 @@ def run_few_shot(model_type, model_chkpt, data_srcs, chkpt_dir = './checkpoints'
         print('Creating Trainer')
         tb_logger = pl.loggers.TensorBoardLogger(save_dir = log_dir)
         trainer = pl.Trainer(accelerator = 'gpu',
-                     devices = 2,
-                     max_epochs = 3,
-                     min_epochs = 1,
+                     devices = num_devices,
+                     max_epochs = max_epochs,
+                     min_epochs = min_epochs,
                      auto_lr_find = False,
                      callbacks = [checkpoint],
                      val_check_interval = 0.25,

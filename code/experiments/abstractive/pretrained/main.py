@@ -34,10 +34,8 @@ if __name__ == '__main__':
         model_chkpt = args['model']
         if 'bart' in model_chkpt:
                 model_type = 'bart'
-        elif 'PRIMERA' in model_chkpt or 'cocosum' in model_chkpt:
+        elif 'PRIMERA' in model_chkpt:
                 model_type = 'primera'
-        elif 'pegasus' in model_chkpt:
-                model_type = 'pegasus'
 
         chkpt_dir = args['chkpt_dir']
         res_dir   = args['results_fp']
