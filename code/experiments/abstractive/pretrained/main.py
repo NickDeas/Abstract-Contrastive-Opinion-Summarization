@@ -51,8 +51,7 @@ if __name__ == '__main__':
         elif sc_name == 'fshot':
 
                 data_srcs = {'train': args['train_fp'],
-                                        'test': args['test_fp'],
-                                        'val': args['val_fp']}
+                                        'test': args['test_fp']}
 
                 run_few_shot(model_type, model_chkpt, data_srcs, chkpt_dir = chkpt_dir, log_dir = res_dir, batch_size = batch_size) 
 
