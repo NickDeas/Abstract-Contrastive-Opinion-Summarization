@@ -27,6 +27,7 @@ class DocDataset(Dataset):
                 
         """
         self.data = df
+        self.data['title_date'] = self.data['title'] + '_' + self.data['date']
         self.text_col = text_col
 
         # get vectorized text
@@ -52,7 +53,7 @@ class DocDataset(Dataset):
         """
         bow = self.bows[ix].toarray().astype(np.float32)
         
-        return_dict = {'bow': bow, 'title': self.data['title'].values[ix]}
+        return_dict = {'bow': bow, 'title_date': self.data['title_date'].values[ix]}
         
         return return_dict
     
