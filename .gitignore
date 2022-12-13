@@ -2,6 +2,7 @@ drivers/
 .ipynb_checkpoints/
 data/
 models/
+results/
 
 3.19.0
 *.pyc
