@@ -3,6 +3,7 @@ drivers/
 data/
 models/
 results/
+gen_sums/
 
 3.19.0
 *.pyc
@@ -11,4 +12,5 @@ temp/
 
 abs_cos/
 abstract_cos/
+*env/
 code/data_collection/pull_twitter/
