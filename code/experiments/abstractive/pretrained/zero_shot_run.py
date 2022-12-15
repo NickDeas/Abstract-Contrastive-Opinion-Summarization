@@ -1,5 +1,4 @@
 from transformers import BartForConditionalGeneration, BartTokenizer
-from transformers import PegasusForConditionalGeneration, PegasusTokenizer
 from transformers import AutoTokenizer, LEDForConditionalGeneration
 import pytorch_lightning as pl
 from tl_lib import *
@@ -11,9 +10,6 @@ def run_zero_shot(model_type, model_chkpt, test_fp, chkpt_dir = './checkpoints',
         if model_type == 'bart':
                 model = BartForConditionalGeneration.from_pretrained(model_chkpt)
                 tokenizer = BartTokenizer.from_pretrained(model_chkpt)
-        elif model_type == 'pegasus':
-                model = PegasusForConditionalGeneration.from_pretrained(model_chkpt)
-                tokenizer = PegasusTokenizer.from_pretrained(model_chkpt)
         elif model_type == 'primera':
                 model = LEDForConditionalGeneration.from_pretrained(model_chkpt)
                 tokenizer = AutoTokenizer.from_pretrained(model_chkpt)
@@ -22,7 +18,7 @@ def run_zero_shot(model_type, model_chkpt, test_fp, chkpt_dir = './checkpoints',
         lightning_model = PoliSummModel(tokenizer, model)
 
         print('Setting Up Data Module')
-        data_mod = PoliSummEvalModule(tokenizer, test_fp, batch_size = batch_size)
+        data_mod = PoliSummEvalModule(tokenizer, test_fp, batch_size = batch_size, is_primera = (model_type == 'primera'))
         data_mod.prepare_data()
         data_mod.setup()
 

@@ -110,8 +110,8 @@ class PoliSummEvalModule(pl.LightningDataModule):
     def prepare_data(self):
         
         self.data = pd.read_csv(self.src_csv)
-        assert self.text_col in self.data.columns, f'Missing source texts column: {self.text_col}'
-        assert self.trg_col in self.data.columns, f'Missing target summaries column: {self.trg_col}'
+        #assert self.text_col in self.data.columns, f'Missing source texts column: {self.text_col}'
+        #assert self.trg_col in self.data.columns, f'Missing target summaries column: {self.trg_col}'
         
     def setup(self, stage = None):
 
@@ -120,7 +120,7 @@ class PoliSummEvalModule(pl.LightningDataModule):
         targ_texts = self.data[self.trg_col].astype(str).values
         self.title_dates = self.data['title_date'].astype(str).values
 
-        self.test_encodings = encode_sentences(self.tokenizer, src_texts, targ_texts, return_tensors = 'pt')
+        self.test_encodings = encode_and_tokenize(self.tokenizer, src_texts, targ_texts)
         
     def test_dataloader(self):
         dataset = PoliSummDataset(self.title_dates, self.test_encodings)
@@ -130,7 +130,7 @@ class PoliSummEvalModule(pl.LightningDataModule):
 
 class PoliSummDataModule(pl.LightningDataModule):
     
-    def __init__(self, tokenizer, src_csvs, batch_size = 4):
+    def __init__(self, tokenizer, src_csvs, batch_size = 4, is_primera = False):
         '''
             Data expected to have columns ('all_texts', 'all_sum')
         '''
@@ -140,23 +140,27 @@ class PoliSummDataModule(pl.LightningDataModule):
         self.tokenizer = tokenizer
         self.src_csvs = src_csvs
         self.batch_size = batch_size
+
+        self.text_col = 'sm_text'
+        if is_primera:
+            self.text_col += '_primera'
         
     def prepare_data(self):
         
         self.data_dict = {key: pd.read_csv(val) for key, val in self.src_csvs.items()}
         
-    def setup(self):
+    def setup(self, stage = None):
         
         train = self.data_dict['train']
         test  = self.data_dict['test']
 
-        train_tds, train_src, train_trg = train['title_dates'], train['sm_text'], train['sum']
-        test_tds, test_src, test_trg = test['title_dates'], test['sm_text'], test['sum']
+        train_tds, train_src, train_trg = train['title_date'], train[self.text_col], train['sum']
+        test_tds, test_src, test_trg = test['title_date'], test[self.text_col], test['sum']
 
         self.train_tds = train_tds
         self.test_tds  = test_tds
-        self.train_encodings = encode_sentences(self.tokenizer, train_src, train_trg, return_tensors = 'pt')
-        self.test_encodings  = encode_sentences(self.tokenizer, test_src, test_trg, return_tensors = 'pt')
+        self.train_encodings = encode_and_tokenize(self.tokenizer, train_src, train_trg)
+        self.test_encodings  = encode_and_tokenize(self.tokenizer, test_src, test_trg)
     
     def train_dataloader(self):
         dataset = PoliSummDataset(self.train_tds, self.train_encodings)
