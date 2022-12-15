@@ -21,7 +21,6 @@ if __name__ == '__main__':
         parser_fs.add_argument('-m', '--model', type = str, help = 'HuggingFace Model Checkpoint to use. (Must be Bart or Pegasus)')
         parser_fs.add_argument('-tr', '--train-fp', type = str, help = 'Location of the training csv data')
         parser_fs.add_argument('-te', '--test-fp', type = str, help = 'Location of the test csv data')
-        parser_fs.add_argument('-v', '--val-fp', type = str, help = 'Location of the validation csv data')
         parser_fs.add_argument('-bs', '--batch-size', type = int, help = 'Batch size for training and testing', default = 4)
         parser_fs.add_argument('-cd', '--chkpt-dir', type = str, help = 'Output Directory for Model Checkpoints')
         parser_fs.add_argument('-rf', '--results-fp', type = str, help = 'Results directory')
