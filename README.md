@@ -32,7 +32,34 @@ __Pull_Twitter__ `pull_twitter` is a small library I co-authored that simplifies
 git clone https://github.com/dhudsmith/pull_twitter.git
 ```
 
-## 1) Data Generation and Preprocessing
+__CoCoSum__ The authors of [Comparative Opinion Summarization via Collaborative Decoding](https://arxiv.org/pdf/2110.07520/) released the implementation of their model, CoCoSum. Run the following line from the `code/experiments/abstractive/` directory:
+```
+git clone https://github.com/megagonlabs/cocosum.git
+```
 
+In the base directory, create a virtual environment, activate, and pip install requirements.txt:
+```
+python -m virtualenv abs_cos
+source abs_cos/bin/activate
+pip install -r requirements.txt
+```
+
+## 1) Data Generation and Preprocessing
+The `code/data_collection/` folder holds all code for scraping TheFlipSide, Twitter, and Reddit in jupyter notebooks. The notebooks are numbered in the order they should be executed, with a note in `5 - Twitter Scraper.ipynb` stating when to run the scraping bash script. The first 4 can be executed automatically with `jupyter nbconvert --execute <Notebook 1-4>>`.
+
+Run `5 - Twitter Scraper.ipynb` as well as the following command in the notebook:
+```
+  ./scrape_twitter.sh
+```
+
+The final notebook can be run with `jupyter nbconvert --execute "6 - Data Consolidation and Statistics.ipynb"`
+
+The final notebook also preprocesses the data into separate csv's to be input to ToGL and baseline training/inference scripts. More details on data collection and preprocessing steps are included in a ReadMe in the data_collection folder.
+
+## 2) Baseline Training
+
+## 3) Training Experiments
+
+## 4) Evaluation
 
 
