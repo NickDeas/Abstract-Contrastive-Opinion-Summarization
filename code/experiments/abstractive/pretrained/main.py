@@ -16,7 +16,6 @@ if __name__ == '__main__':
         parser_zs.add_argument('-m', '--model', type = str, help = 'HuggingFace Model Checkpoint to use. (Must be Bart or Pegasus)')
         parser_zs.add_argument('-tfp', '--test-fp', type = str, help = 'Location of the test csv data')
         parser_zs.add_argument('-bs', '--batch-size', type = int, help = 'Batch size for training and testing', default = 4)
-        parser_zs.add_argument('-cd', '--chkpt-dir', type = str, help = 'Output Directory for Model Checkpoints')
         parser_zs.add_argument('-rf', '--results-fp', type = str, help = 'Results directory')
         parser_zs.set_defaults(name = 'zshot')
 

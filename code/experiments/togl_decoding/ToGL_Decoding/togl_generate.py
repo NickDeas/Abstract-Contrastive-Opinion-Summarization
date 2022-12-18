@@ -48,11 +48,6 @@ if __name__ == '__main__':
                         help = 'Function to use in combining output word distributions and ToGL distributions',
                         required = False,
                         default = 'sum')
-    parser.add_argument('-d', '--device',
-                        type = str,
-                        help = 'torch cuda device to use in generation',
-                        required = False,
-                        default = 'cuda:0')
     parser.add_argument('-ts', '--togl-start',
                         type = int,
                         help = 'Minimum index of token when togl distributions are incorporated',
@@ -81,7 +76,12 @@ if __name__ == '__main__':
                         type = int,
                         help = 'Maximum length of the generation',
                         required = False,
-                        default = 64)
+                        default = 128)
+    parser.add_argument('-d', '--device',
+                    type = str,
+                    help = 'torch cuda device to use in generation',
+                    required = False,
+                    default = 'cuda:0')
     
     # Parse Command Line Arguments
     print('1. Parsing Arguments')
