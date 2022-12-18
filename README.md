@@ -87,9 +87,13 @@ __CoCoSum__ Follow the CoCoSum github page for instructions on running CoCoSum. 
 
 ## 3) Training Experiments
 
-Training and inference for ToGL-Decoding is completed in two steps. The first step fits the reimplemented Topic-Aspect Model to PoliSum. 
+Training and inference for ToGL-Decoding is completed in three steps. 
+  
+The first step fits the reimplemented Topic-Aspect Model to PoliSum. The notebook for training the TAM is located in `code/experiments/togl_decoding/TAM/TAM Training.ipynb`.
+  
+The second step runs the fitted TAM on PoliSum to pre-generate the ToGL distributions for evaluation. The notebook to generate the distributions is located in `code/experiments/togl_decoding/TAM/Aspect Prediction.ipynb`
 
-The second step involves running inference with ToGL-Decoding and the TAM fit in the last step, which is also packaged in a CLI for easy experiments. In the `code/experiments/togl_decoding/ToGL_Decoding/` directory, the CLI is run with `togl_generate.py` to generate summaries. Parameters are explained in more detail below.
+The third step involves running inference with ToGL-Decoding and the TAM fit in the last step, which is also packaged in a CLI for easy experiments. In the `code/experiments/togl_decoding/ToGL_Decoding/` directory, the CLI is run with `togl_generate.py` to generate summaries. Parameters are explained in more detail below.
 
 <<List paramater details>>
 
