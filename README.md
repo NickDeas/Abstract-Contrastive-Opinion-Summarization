@@ -56,7 +56,7 @@ Then, install a chrome driver for your system and place it in the drivers direct
 Finally, a small change to the `torchmetrics` library needed to be made for BertScores to be calculated correctly. Find the installation of torchmetrics, and go to `torchmetrics/bert.py`. In lines 188 and 196, change `truncation = False` to `truncation = True`.
 
 ## 1) Data Generation and Preprocessing
-<img src="https://github.com/NickDeas/Abstract-Contrastive-Opinion-Summarization/blob/main/images/FlipSide%20Example.png?raw=True" width = 250>
+<img src="https://github.com/NickDeas/Abstract-Contrastive-Opinion-Summarization/blob/main/images/FlipSide%20Example.png?raw=True" width = 450>
 The `code/data_collection/` folder holds all code for scraping TheFlipSide, Twitter, and Reddit in jupyter notebooks. The notebooks are numbered in the order they should be executed, with a note in `5 - Twitter Scraper.ipynb` stating when to run the scraping bash script. The first 4 can be executed automatically with `jupyter nbconvert --execute <Notebook 1-4>`, repolace `<>` with the name of each notebook.
 
 Run `5 - Twitter Scraper.ipynb` as well as the following command in the notebook:
