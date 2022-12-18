@@ -79,9 +79,7 @@ Results will automatically be saved to the results directory.
 
 __Abstractive__ Training and inference of abstractive baselines is packaged in a CLI to enable running many experiments. Within the `code/experiments/abstractive/pretrained` directory, both experiments without fine-tuning and with fine-tuning can be run.
 
-The `main.py` script manages training and inference, with the first parameter designating which experiment to run. Running `python -m main zshot ...` runs the zero-shot experiment, and `python-m main fshot` runs the few shot experiment. For each model, `zshot` need only be run once, but `fshot` should be run for each kfold.
-
-<<List parameter details>>
+The `main.py` script manages training and inference, with the first parameter designating which experiment to run. Running `python -m main zshot ...` runs the zero-shot experiment, and `python-m main fshot` runs the few shot experiment. For each model, `zshot` need only be run once, but `fshot` should be run for each kfold. CLI command details are below the execution paths.
 
 __CoCoSum__ Follow the CoCoSum github page for instructions on running CoCoSum. A json file in the format expected by CoCoSum is created by the data_collection folder scripts and will be held in the `data/` directory.
 
@@ -93,11 +91,48 @@ The first step fits the reimplemented Topic-Aspect Model to PoliSum. The noteboo
   
 The second step runs the fitted TAM on PoliSum to pre-generate the ToGL distributions for evaluation. The notebook to generate the distributions is located in `code/experiments/togl_decoding/TAM/Aspect Prediction.ipynb`
 
-The third step involves running inference with ToGL-Decoding and the TAM fit in the last step, which is also packaged in a CLI for easy experiments. In the `code/experiments/togl_decoding/ToGL_Decoding/` directory, the CLI is run with `togl_generate.py` to generate summaries. Parameters are explained in more detail below.
-
-<<List paramater details>>
+The third step involves running inference with ToGL-Decoding and the TAM fit in the last step, which is also packaged in a CLI for easy experiments. In the `code/experiments/togl_decoding/ToGL_Decoding/` directory, the CLI is run with `togl_generate.py` to generate summaries. Parameters are explained in more detail below.CLI command details are below the execution paths.
 
 ## 4) Evaluation
 
 Finally, all baselines and models are evaluated at the same time in a single jupyter notebook contained in `code/experiments/Full Evaluation.ipynb`. As other notebooks, the evaluation can be ran with `jupyter nbconvert --execute "Full Evaluation.ipynb`, but the file will need to be opened afterward to view results for each of the 3 (2 experiments and 1 supplementary) experiments.
 
+# CLI Commands
+
+## Zero Shot Abstractive Baseline
+The following lists parameters for the command `python -m main zhot ...`
+|Parameter (Short) | Description | Required (Default) |
+|------------------|-------------|--------------------|
+|--model (-m) | The name of the base model checkpoint | Yes |
+|--test-fp (-tfp) | File path of the test csv file | Yes |
+|--batch-size (-bs) | Batch size to use in evaluation | No (4) |
+|-results-fp (-rf) | Directory to store logs and model generations | No ('./') |
+
+## Few Shot/KFold Abstractive Baseline
+The following lists parameters for the command `python -m main fhot ...`
+|Parameter (Short) | Description | Required (Default) |
+|------------------|-------------|--------------------|
+|--model (-m) | The name of the base model checkpoint | Yes |
+|--train-fp (-tr) | File path of the train csv file | Yes |
+|--test-fp (-te) | File path of the test csv file | Yes |
+|--batch-size (-bs) | Batch size to use in training and evaluation | No (4) |
+|--chkpt-dir (-cd) | Directory to store model checkpoints in during training | No ('./') |
+|-results-fp (-rf) | Directory to store logs and model generations | No ('./') |
+
+## ToGL-Decoding
+The following lists parameters for the command `python -m togl_generate ...`
+|Parameter (Short) | Description | Required (Default) |
+|------------------|-------------|--------------------|
+|--intput (-i) | Input csv file path | Yes |
+|--src-col (-sc) | Column name in input containing source texts | Yes |--togl-left (-tl) | File path to json dictionary of togl distributions for left summaries | Yes |
+|--togl-right (-tr) | File path to json dictionary of togl distributions for right summaries | Yes |
+|--output (-o) | Output csv path to store generated summaries | Yes |
+|--model (-m) | Base pretrained model checkpoint to use in togl decoding | No ('facebook/bart-large-xsum') |
+|--togl-func (-tf) | Function to use in combining output word distributions and ToGL distributions | No ('sum') |
+|--device (-d) | Torch cuda device to use in generation | No ('cuda:0') |
+|--togl-start (-ts) | Minimum index of token when togl distributions are incorporated | No (3) |
+| --togl-weight (-tw) | Weighting of togl distributions in generation (should be less than 1) | No (0.1) |
+| --num-beams (-nb) | Number of beams to use in beam search during generation | No (3) |
+| --no-repeat-ngram (-nr) | No Repeat Ngram Size to constrain generations | No (3) |
+| --min-length (-mi) | Minimum length of generations | No (16) |
+| --max-length (-ma) | Maximum length of generations | No (128) |
