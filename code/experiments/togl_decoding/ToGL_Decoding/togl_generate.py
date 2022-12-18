@@ -1,3 +1,5 @@
+# CLI Script for running ToGL-Decoding Inference
+
 import argparse
 import json
 
@@ -12,6 +14,7 @@ from transformers import BartForConditionalGeneration, BartTokenizer
 MAX_INPUT_LEN = 1022
 
 if __name__ == '__main__':
+    
     print('Parsing arguments')
     parser = argparse.ArgumentParser(description = 'Run Togl-Decoding for PoliSum')
     
@@ -80,11 +83,13 @@ if __name__ == '__main__':
                         required = False,
                         default = 64)
     
+    # Parse Command Line Arguments
     print('1. Parsing Arguments')
     args = vars(parser.parse_args())
     
     device = torch.device(args['device'])
     
+    # Download model and tokenizer from HuggingFace Hub or cache if already downloaded
     print('2. Downloading model and tokenizer')
     # Load model and tokenizer
     tokenizer = BartTokenizer.from_pretrained(args['model'])
@@ -98,7 +103,7 @@ if __name__ == '__main__':
     # Read data
     data = pd.read_csv(args['input'])
     
-    # Read togl distributions
+    # Read stored togl distributions
     with open(args['togl_left'], 'r') as f:
         togl_l_dists = json.load(f)
     with open(args['togl_right'], 'r') as f:
@@ -111,15 +116,17 @@ if __name__ == '__main__':
         src_text = row[args['src_col']]
         src_title_date = row['title'] + '_' + row['date']
         
+        # Create dictionary of left and right togl_distributions
         togl_dist = {
             'l': (torch.tensor(togl_l_dists[src_title_date][0]).to(device), torch.tensor(togl_l_dists[src_title_date][1], dtype = torch.long).to(device)),
             'r': (torch.tensor(togl_r_dists[src_title_date][0]).to(device), torch.tensor(togl_r_dists[src_title_date][1], dtype = torch.long).to(device)),
         }
         
-                
+        # Tokenize and encode inputs
         src_tok = tokenizer(src_text, padding = True, truncation = True, return_tensors = 'pt')
         src_tok = src_tok.to(device)
-    
+        
+        # Generate a left and right summary using ToGL-Decoding
         for i, side in enumerate('lr'):
             output = togl_decoder.generate(src_tok['input_ids'],
                                            togl_dist[side],
@@ -133,8 +140,10 @@ if __name__ == '__main__':
             summary = tokenizer.decode(output[0], skip_special_tokens = True)
             outputs[side].append(summary)
         
+        # Append the title_date to map back to PoliSum dataset
         outputs['title_date'].append(src_title_date)
     
+    # Store generated summaries as csv
     print(f'Decoding complete. Saving generated summaries to {args["output"]}')
     outputs_df = pd.DataFrame(outputs)
     outputs_df.to_csv(args['output'], index = None)
