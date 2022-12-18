@@ -56,6 +56,8 @@ Then, install a chrome driver for your system and place it in the drivers direct
 Finally, a small change to the `torchmetrics` library needed to be made for BertScores to be calculated correctly. Find the installation of torchmetrics, and go to `torchmetrics/bert.py`. In lines 188 and 196, change `truncation = False` to `truncation = True`.
 
 ## 1) Data Generation and Preprocessing
+![Flipside Article](https://github.com/NickDeas/Abstract-Contrastive-Opinion-Summarization/blob/main/images/Flipside%20Example.PNG?raw=True)
+![Flipside Opinions](https://github.com/NickDeas/Abstract-Contrastive-Opinion-Summarization/blob/main/images/Flipside%20ExpOp.PNG?raw=True)
 The `code/data_collection/` folder holds all code for scraping TheFlipSide, Twitter, and Reddit in jupyter notebooks. The notebooks are numbered in the order they should be executed, with a note in `5 - Twitter Scraper.ipynb` stating when to run the scraping bash script. The first 4 can be executed automatically with `jupyter nbconvert --execute <Notebook 1-4>`, repolace `<>` with the name of each notebook.
 
 Run `5 - Twitter Scraper.ipynb` as well as the following command in the notebook:
@@ -84,7 +86,7 @@ The `main.py` script manages training and inference, with the first parameter de
 __CoCoSum__ Follow the CoCoSum github page for instructions on running CoCoSum. A json file in the format expected by CoCoSum is created by the data_collection folder scripts and will be held in the `data/` directory.
 
 ## 3) Training Experiments
-
+![ToGL Flowchart](https://github.com/NickDeas/Abstract-Contrastive-Opinion-Summarization/blob/main/images/ToGL%20Decoding.png?raw=True)
 Training and inference for ToGL-Decoding is completed in three steps. 
   
 The first step fits the reimplemented Topic-Aspect Model to PoliSum. The notebook for training the TAM is located in `code/experiments/togl_decoding/TAM/TAM Training.ipynb`.
