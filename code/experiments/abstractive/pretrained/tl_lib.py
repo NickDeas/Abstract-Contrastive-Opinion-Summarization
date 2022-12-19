@@ -233,6 +233,16 @@ class PoliSummDataModule(pl.LightningDataModule):
         self.test_tds  = test_tds
         self.train_encodings = encode_and_tokenize(self.tokenizer, train_src, train_trg)
         self.test_encodings  = encode_and_tokenize(self.tokenizer, test_src, test_trg)
+
+        if 'val' in self.data_dict['val']:
+            val = self.data_dict['val']
+            val_tds, val_src, val_trg = val['title_date'], val[self.text_col], val['sum']
+            self.val_tds = val_tds
+            self.val_encodings = encode_and_tokenize(self.tokenizer, val_src, train_trg)
+        else:
+            self.val_tds = None
+            self.val_encodings = None
+
     
     def train_dataloader(self):
         '''
@@ -245,8 +255,26 @@ class PoliSummDataModule(pl.LightningDataModule):
                               shuffle = True,
                               num_workers = 16,
                               persistent_workers=True)
+
         return train_dl
-        
+    
+    def val_dataloader(self):
+        '''
+            Create the validation dataset and dataloader
+        '''
+
+        if self.val_encodings is not None:
+            dataset = PoliSummDataset(self.val_encodings)
+            val_dl = DataLoader(dataset, 
+                                  batch_size = self.batch_size, 
+                                  shuffle = False,
+                                  num_workers = 16,
+                                  persistent_workers=True)
+
+            return val_dl
+        else:
+            return None
+
     def test_dataloader(self):
         '''
             Create the training dataset and data loader for model inference
@@ -293,7 +321,7 @@ class PoliSummModel(pl.LightningModule):
         # If running validation during training, create scorers for ROUGE and BERTScore
         if self.test_in_train:
             self.rouge_scorer = ROUGEScore()
-            self.bert_scorer  = BERTScore(model_name_or_path = 'microsoft/deberta-xlarge-mnli', rescale_with_baseline = True, lang = 'en')
+            self.bert_scorer  = BERTScore(model_name_or_path = 'roberta-large-mnli', rescale_with_baseline = True, lang = 'en')
 
         
     def forward(self, input_ids, **kwargs):
@@ -347,7 +375,37 @@ class PoliSummModel(pl.LightningModule):
         train_loss = ce_loss(logits.view(-1, logits.shape[-1]), targ.view(-1))
         
         self.log_dict({'loss': train_loss.clone().detach()})
-    
+
+
+     def validation_step(self, batch, batch_idx):
+        src, mask, targ = batch['input_ids'], batch['attention_mask'], batch['labels']
+
+        output = self(src, 
+                     attention_mask = mask,
+                     decoder_input_ids = targ)
+        logits = output[0]
+
+        ce_loss = torch.nn.CrossEntropyLoss(ignore_index = self.tokenizer.pad_token_id)
+        val_loss = ce_loss(logits.view(-1, logits.shape[-1]), targ.view(-1))
+
+        res_dict = {'loss': val_loss}
+
+        # Summarization Metrics
+        if self.test_in_train:
+            gen_summs = self.generate_summ(batch, max_len = 256)
+            ref_summs = self.untokenize_targ(batch)
+
+            # ROUGE Score
+            rouge_keep = ('rouge1_fmeasure', 'rouge2_fmeasure', 'rougeL_fmeasure')
+            rouge_scores = self.rouge_scorer(gen_summs, ref_summs)
+            rouge_scores = {name:score for name, score in rouge_scores if name in rouge_keep}          
+
+            res_dict.update(rouge_scores)
+
+        res_dict = {key: torch.tensor(val).mean() for key, val in res_dict.items()}
+        self.log_dict(res_dict)
+
+
     def test_step(self, batch, batch_idx):
         '''
             Complete a step of model testing

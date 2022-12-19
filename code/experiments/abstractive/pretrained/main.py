@@ -25,6 +25,7 @@ if __name__ == '__main__':
         parser_fs.add_argument('-tr', '--train-fp', type = str, help = 'Location of the training csv data')
         parser_fs.add_argument('-te', '--test-fp', type = str, help = 'Location of the test csv data')
         parser_fs.add_argument('-bs', '--batch-size', type = int, help = 'Batch size for training and testing', default = 4)
+        parser_fs.add_argument('-va', '--val-fp', type = str, help = 'Location of the validation csv data', required = False)
         parser_fs.add_argument('-cd', '--chkpt-dir', type = str, help = 'Output Directory for Model Checkpoints')
         parser_fs.add_argument('-rf', '--results-fp', type = str, help = 'Results directory')
         parser_fs.set_defaults(name = 'fshot')
@@ -63,6 +64,8 @@ if __name__ == '__main__':
                 # Extract the data sources from arguments and create dictionary
                 data_srcs = {'train': args['train_fp'],
                                         'test': args['test_fp']}
+                if args['val_fp']:
+                        data_srcs['val'] = args['val_fp']
                 
                 # Call few shot evaluation function
                 run_few_shot(model_type, 

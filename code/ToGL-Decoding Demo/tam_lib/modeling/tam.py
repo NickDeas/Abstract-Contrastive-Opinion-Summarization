@@ -1,6 +1,7 @@
 import os
 import pickle as pkl
 import json
+import io
 
 import torch
 from torch import nn
@@ -13,6 +14,12 @@ from .layers import *
 
 from typing import Optional, List, Union, Tuple
 
+
+class CPU_Unpickler(pkl.Unpickler):
+    def find_class(self, module, name):
+        if module == 'torch.storage' and name == '_load_from_bytes':
+            return lambda b: torch.load(io.BytesIO(b), map_location='cpu')
+        else: return super().find_class(module, name)
 
 class TAM(nn.Module):
     def __init__(self, num_topics:int, num_aspects: int,
@@ -125,13 +132,6 @@ class TAM(nn.Module):
     
     
     def init_bg_topic(self):
-        '''
-            Randomly initialize the multinomial background topic distribution over the vocabulary
-
-            Return:
-                Randomly initialized background topic
-        '''
-
         inits = torch.zeros(self.vocab_size, requires_grad = True, device = self.device)
         inits = nn.init.uniform_(inits)
         return inits
@@ -147,6 +147,9 @@ class TAM(nn.Module):
                     The corpus of source document BOWS for loss calculations
                 num_docs: int
                     The total number of documents in the source corpus
+                h2: torch.Tensor (optional, default = None)
+                    If half (either ordered or random) of the document texts are passed for
+                        bows, then the remaining half should be passed as h2
         """
         
         pyro.param("bg_topic", self.bg_topic)
@@ -171,28 +174,12 @@ class TAM(nn.Module):
             asp_probs = torch.softmax(self.asp_decoder(pi), -1)
             ta_probs  = torch.softmax(self.ta_decoder(theta, pi), -1)
             
-
-            # The following portion of the process is a result of modifying the generative process for Stochastic Variational Inference
-            # The original TAM model has a nested plate over terms in the document and follows the following steps
-            # (a) Sample a topic, aspect, and level (l)
-            # (b) If l=0, sample a route (x) from psi_0, is l=1, sample a route (x) from psi_1
-            # (c) If x=0, l=0: sample a word from the background topic
-            # (d) If x=0, l=1: sample a word from the sampled aspect
-            # (e) If x=1, l=0: sample a word from the selected topic
-            # (f) If x=1, l=1: sample a word from the aspectual topic for the selected topic and aspect
-
-            # Calculate the background and topic distributions weighted by sigma
             bg_psi  = psi_0 * (1.-sigma)
             top_psi = (theta @ psi.T) * sigma
             
-            # Reformat background topic
             b_bg_topic = torch.softmax(self.bg_topic, -1).unsqueeze(0).repeat((top_probs.shape[0], 1))
-            
-            # Calculate the level 0 probabilities and level 1 probabilities
             probs_l0 = ((b_bg_topic * (1-bg_psi).unsqueeze(1)) + (asp_probs * bg_psi.unsqueeze(1))) * (1-sigma).unsqueeze(1)
             probs_l1 = ((top_probs * (1-top_psi).unsqueeze(1)) + (ta_probs * top_psi.unsqueeze(1))) * sigma.unsqueeze(1)
-            
-            # Sum to calculate full term probabilities
             all_probs = probs_l0 + probs_l1
 
             # Maximum document length for multinomial distribution sampling of reconstruction
@@ -228,7 +215,7 @@ class TAM(nn.Module):
         psi_0 = pyro.sample('psi0', self.psi0_prior).to(self.device)
         psi   = pyro.sample('psi', self.psi_prior.to_event(1)).to(self.device)
 
-        # Document plate
+        # document plate
         with pyro.plate("documents", num_docs, subsample = bows):
 
             delta_loc, delta_sigma = self.delta_encoder(bows.float())
@@ -237,13 +224,9 @@ class TAM(nn.Module):
 
             pyro.sample(f"delta", dist.Normal(delta_loc, delta_sigma).to_event(1))
             pyro.sample(f"tau",   dist.Normal(tau_loc, tau_sigma).to_event(1))
-
             sigma = pyro.sample('sigma', self.sigma_prior).to(self.device)
 
     def betas(self):
-        '''
-            Extract all betas (background, topic, aspect, aspectual-topic) from the model
-        '''
         top_beta = self.top_decoder.beta.weight.detach().T
         asp_beta = self.asp_decoder.beta.weight.detach().T
         ta_beta  = self.ta_decoder.beta.weight.detach().T
@@ -252,20 +235,14 @@ class TAM(nn.Module):
         return bg_beta, top_beta, asp_beta, ta_beta
     
     def reconstruct_doc(self, bow, num_particles = 50):
-        '''
-            Reconstruct a document to measure perplexity
-        '''
-
         self.eval()
 
         num_docs = bow.shape[0]
 
         with torch.no_grad():
-            # Predict parameters of topic and aspect distributions
             delta_loc, delta_scale = self.delta_encoder(bow)
             tau_loc, tau_scale = self.tau_encoder(bow)
-        
-        # Create distributions from predicted topic and aspect parameters
+            
         delta_samples = dist.Normal(delta_loc, delta_scale).sample((num_particles,))
         tau_samples   = dist.Normal(tau_loc, tau_scale).sample((num_particles,))
         sigma         = self.sigma_prior.sample((num_particles,))
@@ -275,8 +252,6 @@ class TAM(nn.Module):
 
         # decode for reconstruction
         with torch.no_grad():
-            # Follow the generative process using the posterior approximated networks (Encoders)
-            # Most code is simply a copy of the generative process (model())
             psi_0 = self.psi0_prior.sample()
             psi   = self.psi_prior.sample()  
         
@@ -309,39 +284,27 @@ class TAM(nn.Module):
         for i, batch in enumerate(test_half_loader):   
             bow = batch['bow'].to(self.device)
 
-            # Reconstruct document and calculate cross entropy of reconstruction
             bow_recon = self.reconstruct_doc(bow, num_particles = num_particles)
             ces       = (-bow*torch.log(bow_recon))
-
-            # Accumulate cross-entropy and word count
             total_ce += ces.sum().cpu().item()
             total_num_words += bow.sum()
-
-        # Find per-term cross-entropy and calculate perplexity          
+            
         ce = total_ce / total_num_words
         perp = torch.exp(ce)
 
         return perp, ce
     
     def pred_aspect_dists(self, bow):
-        '''
-            Predict the aspectual-topic word distributions for use in ToGL-Decoding
-        '''
-
         with torch.no_grad():
-            # Predict the topic and aspect distribution parameters
             delta_loc, delta_scale = self.delta_encoder(bow)
             tau_loc, tau_scale = self.tau_encoder(bow)
 
             theta = delta_loc.softmax(dim = -1)
             pi    = tau_loc.softmax(dim = -1)
 
-            # Isolate the most probable topic and exract the associated aspectual topics
             topic_idx = theta.argmax(dim = -1)
 
             ta_beta = self.ta_decoder.beta.weight.detach().T
-
-            # Aspectual topics are organized with the first half belonging to aspect 1, and the second half to aspect 2
             asp1 = ta_beta[topic_idx].softmax(dim = -1)
             asp2 = ta_beta[topic_idx + ta_beta.shape[0] // 2].softmax(dim = -1)
         
@@ -349,21 +312,16 @@ class TAM(nn.Module):
         
     
     def save(self, save_path:str):
-        '''
-            Save the current model state to the designated save_path
-        '''
-
+        
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         
-        # Save encoders and decoders' weights
         torch.save(self.delta_encoder.state_dict(), f'{save_path}/delta_encoder.pt')
         torch.save(self.tau_encoder.state_dict(), f'{save_path}/tau_encoder.pt')
         torch.save(self.top_decoder.state_dict(), f'{save_path}/top_decoder.pt')
         torch.save(self.asp_decoder.state_dict(), f'{save_path}/asp_decoder.pt')
         torch.save(self.ta_decoder.state_dict(), f'{save_path}/ta_decoder.pt')
         
-        # Save any custom priors
         with open(f'{save_path}/delta_prior.pkl', 'wb') as f:
             pkl.dump(self.delta_prior, f)
             
@@ -373,11 +331,9 @@ class TAM(nn.Module):
         with open(f'{save_path}/psi_prior.pkl', 'wb') as f:
             pkl.dump(self.psi_prior, f)
         
-        # Save background topic
         with open(f'{save_path}/bg_topic.pkl', 'wb') as f:
             pkl.dump(self.bg_topic, f)
         
-        # Create a json dictionary of parameters for this model
         config_dict = {
             'model_type':  'topic_aspect_model',
             'num_topics':  self.num_topics,
@@ -396,10 +352,7 @@ class TAM(nn.Module):
     
     @classmethod
     def from_pretrained(cls, model_path, device = None):
-        '''
-            Load a pre-trained TAM from the given model_path and place it on device
-        '''
-
+        
         with open(f'{model_path}/config.json', 'r') as f:
             config_dict = json.load(f)
         
@@ -436,23 +389,23 @@ class TAM(nn.Module):
                          config_dict['num_aspects'],
                          config_dict['dropout'])
         
-        delta_encoder.load_state_dict(torch.load(f'{model_path}/delta_encoder.pt'))
-        tau_encoder.load_state_dict(torch.load(f'{model_path}/tau_encoder.pt'))
-        top_decoder.load_state_dict(torch.load(f'{model_path}/top_decoder.pt'))
-        asp_decoder.load_state_dict(torch.load(f'{model_path}/asp_decoder.pt'))
-        ta_decoder.load_state_dict(torch.load(f'{model_path}/ta_decoder.pt'))
+        delta_encoder.load_state_dict(torch.load(f'{model_path}/delta_encoder.pt', map_location=device))
+        tau_encoder.load_state_dict(torch.load(f'{model_path}/tau_encoder.pt', map_location=device))
+        top_decoder.load_state_dict(torch.load(f'{model_path}/top_decoder.pt', map_location=device))
+        asp_decoder.load_state_dict(torch.load(f'{model_path}/asp_decoder.pt', map_location=device))
+        ta_decoder.load_state_dict(torch.load(f'{model_path}/ta_decoder.pt', map_location=device))
         
         with open(f'{model_path}/delta_prior.pkl', 'rb') as f:
-            delta_prior = pkl.load(f)
+            delta_prior = CPU_Unpickler(f).load()
             
         with open(f'{model_path}/psi0_prior.pkl', 'rb') as f:
-            psi0_prior = pkl.load(f)
+            psi0_prior = CPU_Unpickler(f).load()
             
         with open(f'{model_path}/psi_prior.pkl', 'rb') as f:
-            psi_prior = pkl.load(f)
+            psi_prior = CPU_Unpickler(f).load()
             
         with open(f'{model_path}/bg_topic.pkl', 'rb') as f:
-            bg_topic = pkl.load(f)
+            bg_topic = CPU_Unpickler(f).load()
                         
         model = cls(num_topics, num_aspects,
                     delta_encoder = delta_encoder, tau_encoder = tau_encoder, 
