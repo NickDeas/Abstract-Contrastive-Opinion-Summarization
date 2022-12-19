@@ -115,6 +115,7 @@ The following lists parameters for the command `python -m main fhot ...`
 |------------------|-------------|--------------------|
 |--model (-m) | The name of the base model checkpoint | Yes |
 |--train-fp (-tr) | File path of the train csv file | Yes |
+|--val-fp (-va) | File path of the validation csv file | No |
 |--test-fp (-te) | File path of the test csv file | Yes |
 |--batch-size (-bs) | Batch size to use in training and evaluation | No (4) |
 |--chkpt-dir (-cd) | Directory to store model checkpoints in during training | No ('./') |
