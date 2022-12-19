@@ -1,5 +1,5 @@
 # Abstractive Summarization of Opposed Political Perspectives on Controversial Issues
-Code accompanying COMS 6998 project on an _Abstractive Summarization of Opposed Political Perspectives on Controversial Issues_
+Code accompanying COMS 6998 project on an _Abstractive Summarization of Opposed Political Perspectives on Controversial Issues_. [Skip to Execution Paths](https://github.com/NickDeas/Abstract-Contrastive-Opinion-Summarization#main-execution-paths)
 
 # Repository Hierarchy
 All relevant code and scripts are held in the code directory. The hierarchy is broken down below:
